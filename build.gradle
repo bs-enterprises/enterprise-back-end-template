@@ -1,0 +1,62 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.5.9'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.bs_enterprises'
+version = '0.0.1-SNAPSHOT'
+description = 'Central Multi tenant Enterprise Backend Template'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+
+    // validations
+    implementation("javax.validation:validation-api:2.0.1.Final")
+    // let Spring Boot manage Jackson versions
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-csv'  // only if you need CSV support
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'   // JavaTime support
+//    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+    implementation("io.github.resilience4j:resilience4j-spring-boot2:1.7.1")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
+    // security
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    // apis
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
+    implementation("com.squareup.okhttp3:okhttp:5.1.0")
+
+    //keycloak
+    implementation("org.keycloak:keycloak-admin-client:26.0.3")
+    implementation("org.keycloak:keycloak-core:26.3.2")
+
+    implementation 'cn.ipokerface:snowflake-id-generator:2.5.0'
+
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

@@ -1,0 +1,60 @@
+spring:
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
+  jackson:
+    time-zone: UTC
+    serialization:
+      write-dates-as-timestamps: false
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${properties.keycloak.server-url}/realms/${properties.keycloak.realm}
+          jwk-set-uri: ${spring.security.oauth2.resourceserver.jwt.issuer-uri}/protocol/openid-connect/certs
+
+  application:
+    name: ${APPLICATION_NAME:GMS}
+  mongodb:
+    uri: ${MONGO_DB_URI:mongodb://localhost:27017/youapp}
+app:
+  crypto:
+    # Algorithm is fixed in code as AES/GCM/NoPadding, you can still expose it if you like.
+    keys:
+      - id: primary
+        secret: ${APP_CRYPTO_KEY_PRIMARY:ZHhgFtvfmrKUtD/1lyTvlv4Soe2dtDP5k9A0XtQIkRU=}   # 32-byte key, Base64
+      # - id: old-2024-12
+      #   secret: ${APP_CRYPTO_KEY_OLD_2024_12}
+company:
+  name: ${APPLICATION_NAME}
+  website-url: ${APPLICATION_WEBSITE_URL:www.youapp.com}
+  support-email: ${APPLICATION_SUPPORT_EMAIL:support@youapp.com}
+  origin: ${APPLICATION_ORIGIN:http://localhost:5173}
+  verify-email-route: ${company.origin}you-app/auth/verify-email
+  reset-password-route: ${company.origin}you-app/auth/reset-password
+
+# Custom application properties
+properties:
+  keycloak:
+    server-url: ${KEYCLOAK_SERVER_URL:https://auth-dev.youapp.com}
+    realm: ${KEYCLOAK_REALM:master}
+    username: ${KEYCLOAK_ADMIN_USERNAME:platformadmin}
+    password: ${KEYCLOAK_ADMIN_PASSWORD:test}
+    master-clients:
+      mobile:
+        id: ${KEYCLOAK_MASTER_MOBILE_CLIENT_ID:mobile-client}
+        secret: ${KEYCLOAK_MASTER_MOBILE_CLIENT_SECRET:mobile-client-secret}
+      web:
+        id: ${KEYCLOAK_MASTER_WEB_CLIENT_ID:app-master-web}
+        secret: ${KEYCLOAK_MASTER_WEB_CLIENT_SECRET:KxxxxfasdfdfgdsfzzzzxxxxyyxxxxxxADx6XA0CcjdDU0PFMNA}
+    token-issuers:
+      mobile:
+        id: ${CLIENT_ID_MOBILE:mobile-token-issuer}
+      web:
+        id: ${CLIENT_ID_WEB:web-token-issuer}
+
+#debug: true
+server:
+  port: ${SERVER_PORT:8080}
+
