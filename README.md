@@ -123,5 +123,3 @@ Useful commands
 More help
 ---------
 See `HELP.md` for links to relevant Spring and Gradle documentation.
-
-If you'd like, I can add a simple `docker-compose.yml` (Mongo + optional Keycloak) and a sample `.env` to make local development easier—tell me if you want that and I'll add it.
