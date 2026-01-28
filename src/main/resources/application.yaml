@@ -16,8 +16,10 @@ spring:
 
   application:
     name: ${APPLICATION_NAME:GMS}
-  mongodb:
-    uri: ${MONGO_DB_URI:mongodb://localhost:27017/youapp}
+  data:
+    mongodb:
+      auto-index-creation: true
+      uri: ${MONGO_DB_URI:mongodb://localhost:27017/youapp}
 app:
   crypto:
     # Algorithm is fixed in code as AES/GCM/NoPadding, you can still expose it if you like.

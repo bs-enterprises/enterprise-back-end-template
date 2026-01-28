@@ -265,7 +265,7 @@ public class UserAccountServiceImpl implements UserAccountService {
 
         // persist changes to KeycloakUserModel via repository update if kcUpdates present
         if (!kcUpdates.isEmpty()) {
-            keycloakUserRepository.update(userId, kcUpdates, realmName);
+            keycloakUserRepository.update(userId, kcUpdates,KeycloakUserModel.allowedKeysForUpdate , realmName);
         }
 
         // return fresh model

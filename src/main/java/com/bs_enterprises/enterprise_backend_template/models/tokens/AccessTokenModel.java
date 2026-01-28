@@ -16,7 +16,7 @@ import org.springframework.data.mongodb.core.mapping.Field;
 public class AccessTokenModel {
 
     @Id
-    @Indexed(unique = true) // Index on the id field and enforce uniqueness
+    @Indexed // Index on the id field and enforce uniqueness
     @Field(MongoDBConstants.FIELD_ID)
     private String id;
     private String accessToken;

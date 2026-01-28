@@ -1,16 +1,17 @@
 package com.bs_enterprises.enterprise_backend_template.handlers;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.bs_enterprises.enterprise_backend_template.handlers.exceptions.KeycloakException;
 import com.bs_enterprises.enterprise_backend_template.keys.MessageKeys;
 import com.bs_enterprises.enterprise_backend_template.models.responses.ApiResponse;
-import com.bs_enterprises.enterprise_backend_template.services.MessageUtils;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.bs_enterprises.enterprise_backend_template.services.common.MessageUtils;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -127,6 +128,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
         log.error("Unhandled exception", ex);
         return buildErrorResponse(ex, MessageKeys.ERROR_UNKNOWN_CONTACT_ADMINISTRATOR, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
+        return buildErrorResponse(ex, ex.getMessage(), HttpStatus.BAD_REQUEST);
     }
 
     // -----------------------

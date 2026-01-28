@@ -1,10 +1,11 @@
 package com.bs_enterprises.enterprise_backend_template.utils;
 
-import com.bs_enterprises.enterprise_backend_template.constants.MongoDBConstants;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.bs_enterprises.enterprise_backend_template.constants.MongoDBConstants;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 
@@ -96,6 +97,7 @@ public class QueryBuilderUtil {
     public static final String END_DATE_TIME = "endDateTime";
     public static final String DATE_FIELD = "dateField"; // which field to apply date filter on
     public static final String DATE_FILTER = "dateFilter";
+    public static final String SORT = "sort";
 
     /**
      * Builds a dynamic MongoDB Query object from flexible parameters.
@@ -119,7 +121,11 @@ public class QueryBuilderUtil {
                 ? new Criteria()
                 : new Criteria().andOperator(allCriteria.toArray(new Criteria[0]));
 
-        return Query.query(finalCriteria);
+
+        Query query = Query.query(finalCriteria);
+        if (searchParams.containsKey(SORT))
+            addSortCriteria(searchParams, query);
+        return query;
     }
 
     private static void addIncludeIdsCriteria(Map<String, Object> searchParams, List<Criteria> criteriaList) {
@@ -366,4 +372,49 @@ public class QueryBuilderUtil {
         }
         return List.of(); // returns an immutable empty list
     }
+
+    /**
+     * Adds sorting logic to the query.
+     * <p>
+     * Expected format:
+     * "sort": {
+     * "fieldName": 1 | -1
+     * }
+     */
+    @SuppressWarnings("unchecked")
+    private static void addSortCriteria(
+            Map<String, Object> searchParams,
+            Query query
+    ) {
+        Object sortObj = searchParams.get(SORT);
+
+        if (!(sortObj instanceof Map<?, ?> sortMap) || sortMap.isEmpty()) {
+            return;
+        }
+
+        sortMap.forEach((field, direction) -> {
+            if (!(direction instanceof Number)) {
+                throw new IllegalArgumentException(
+                        "Sort direction must be numeric (1 or -1) for field: " + field
+                );
+            }
+
+            int dir = ((Number) direction).intValue();
+            if (dir != 1 && dir != -1) {
+                throw new IllegalArgumentException(
+                        "Invalid sort direction for field '" + field + "'. Use 1 (ASC) or -1 (DESC)"
+                );
+            }
+
+            query.with(
+                    Sort.by(
+                            dir == 1
+                                    ? Sort.Direction.ASC
+                                    : Sort.Direction.DESC,
+                            field.toString()
+                    )
+            );
+        });
+    }
+
 }

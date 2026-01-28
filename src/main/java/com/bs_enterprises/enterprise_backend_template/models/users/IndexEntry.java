@@ -15,7 +15,7 @@ public class IndexEntry {
 
     @Id
     @Field(MongoDBConstants.FIELD_ID)
-    @Indexed(unique = true)
+    @Indexed
     private String id; // This will be the unique field value (e.g., email)
 
 }

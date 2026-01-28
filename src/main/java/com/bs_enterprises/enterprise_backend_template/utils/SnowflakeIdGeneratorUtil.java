@@ -27,4 +27,22 @@ public class SnowflakeIdGeneratorUtil {
     public static long generateId() {
         return snowflakeIdGenerator.nextId();
     }
+
+    public static long generateId(String previousId) {
+        long newId = snowflakeIdGenerator.nextId();
+
+        // If previousId is null or empty, just return the new ID
+        if (previousId == null || previousId.isEmpty()) {
+            return newId;
+        }
+
+        // Compare with previous ID
+        if (String.valueOf(newId).equals(previousId)) {
+            // Recursively generate until a different ID is produced
+            return generateId(previousId);
+        }
+
+        return newId;
+    }
+
 }

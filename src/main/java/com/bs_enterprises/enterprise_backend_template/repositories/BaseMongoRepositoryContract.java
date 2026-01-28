@@ -9,7 +9,14 @@ public interface BaseMongoRepositoryContract<T> {
 
     T create(T entity, String tenant);
 
-    T update(String id, Map<String, Object> updates, String tenant);
+    T update(String id, Map<String, Object> updates, List<String> allowedKeysForUpdate, String tenant);
+
+    long bulkUpdateByFilters(
+            Map<String, Object> filters,
+            Map<String, Object> updates,
+            List<String> allowedKeysForUpdate,
+            String tenant
+    );
 
     void delete(String id, String tenant);
 

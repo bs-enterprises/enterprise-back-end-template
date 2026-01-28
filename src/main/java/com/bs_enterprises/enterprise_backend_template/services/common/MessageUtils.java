@@ -1,4 +1,4 @@
-package com.bs_enterprises.enterprise_backend_template.services;
+package com.bs_enterprises.enterprise_backend_template.services.common;
 
 import org.springframework.stereotype.Service;
 

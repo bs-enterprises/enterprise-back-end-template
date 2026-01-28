@@ -19,7 +19,7 @@ public class UserSecrets {
 
     @Id
     @Field(MongoDBConstants.FIELD_ID)
-    @Indexed(unique = true)
+    @Indexed
     private String id; // user Id
     private String keycloakUserId;
 
