@@ -1,7 +1,7 @@
-package com.bs_enterprises.enterprise_backend_template.services.impl;
+package com.bs_enterprises.enterprise_backend_template.services.base.impl;
 
 import com.bs_enterprises.enterprise_backend_template.constants.CryptoProperties;
-import com.bs_enterprises.enterprise_backend_template.services.CryptoService;
+import com.bs_enterprises.enterprise_backend_template.services.base.CryptoService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

@@ -1,9 +1,9 @@
-package com.bs_enterprises.enterprise_backend_template.services.impl;
+package com.bs_enterprises.enterprise_backend_template.services.base.impl;
 
-import com.bs_enterprises.enterprise_backend_template.models.users.KeycloakUserModel;
-import com.bs_enterprises.enterprise_backend_template.services.KeycloakUserService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.bs_enterprises.enterprise_backend_template.models.users.KeycloakUserModel;
+import com.bs_enterprises.enterprise_backend_template.services.base.KeycloakUserService;
 import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +14,6 @@ import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Implementation of KeycloakUserService using the Keycloak admin client.
@@ -62,6 +61,13 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
         // Build attributes map only when we have attributes to set.
         Map<String, List<String>> attrs = new HashMap<>();
 
+        if (model.getAttributes() != null) {
+            model.getAttributes().forEach((key, value) -> {
+                if (value != null && !value.isBlank()) {
+                    attrs.put(key, List.of(value));
+                }
+            });
+        }
         // Only set attributes when non-empty to avoid sending empty attribute maps to Keycloak
         if (!attrs.isEmpty()) {
             user.setAttributes(attrs);
@@ -234,9 +240,9 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
 
             // 2) Validate Username (Cannot change)
             if (model.getUsername() != null &&
-                    !model.getUsername().equals(existing.getUsername())) {
+                    !model.getUsername().equalsIgnoreCase(existing.getUsername())) {
                 throw new IllegalArgumentException(
-                        "Username cannot be changed in Keycloak. Existing="
+                        "Username cannot be changed. Existing="
                                 + existing.getUsername()
                                 + ", attempted=" + model.getUsername()
                 );

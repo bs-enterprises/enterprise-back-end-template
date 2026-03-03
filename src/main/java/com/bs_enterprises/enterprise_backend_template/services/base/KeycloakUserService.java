@@ -1,4 +1,4 @@
-package com.bs_enterprises.enterprise_backend_template.services;
+package com.bs_enterprises.enterprise_backend_template.services.base;
 
 import com.bs_enterprises.enterprise_backend_template.models.users.KeycloakUserModel;
 import org.keycloak.representations.idm.UserRepresentation;

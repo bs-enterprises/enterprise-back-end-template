@@ -1,6 +1,5 @@
-package com.bs_enterprises.enterprise_backend_template.services.impl;
+package com.bs_enterprises.enterprise_backend_template.services.common;
 
-import com.bs_enterprises.enterprise_backend_template.services.common.MessageUtils;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;

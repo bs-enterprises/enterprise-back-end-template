@@ -9,12 +9,13 @@ public interface BaseMongoRepositoryContract<T> {
 
     T create(T entity, String tenant);
 
-    T update(String id, Map<String, Object> updates, List<String> allowedKeysForUpdate, String tenant);
+    T create(T entity, String tenant, String collectionName);
+
+    T update(String id, Map<String, Object> updates, String tenant);
 
     long bulkUpdateByFilters(
             Map<String, Object> filters,
             Map<String, Object> updates,
-            List<String> allowedKeysForUpdate,
             String tenant
     );
 
@@ -27,4 +28,6 @@ public interface BaseMongoRepositoryContract<T> {
     long bulkDeleteByIds(List<String> ids, String tenant);
 
     long bulkDeleteByFilters(Map<String, Object> filters, String tenant);
+
+    long countByFilters(Map<String, Object> filters, String tenant);
 }

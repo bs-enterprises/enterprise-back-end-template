@@ -1,4 +1,4 @@
-package com.bs_enterprises.enterprise_backend_template.services;
+package com.bs_enterprises.enterprise_backend_template.services.base;
 
 import com.bs_enterprises.enterprise_backend_template.models.users.KeycloakUserModel;
 import com.bs_enterprises.enterprise_backend_template.models.users.LoadedArtifacts;
@@ -16,8 +16,8 @@ public interface UserAccountService {
                                          String userId,
                                          String email,
                                          String phone,
-                                         List<String> studioIds,
-                                         boolean studioRequired);
+                                         List<String> companyIds,
+                                         boolean companyRequired);
 
     /**
      * Provision a new user:
@@ -47,5 +47,18 @@ public interface UserAccountService {
      * Delete common user resources: delete in Keycloak, delete indices, remove stored user doc and secrets.
      */
     void deleteUser(String realmName, String userId);
+
+    /**
+     * Set password for a user.
+     * Uses the phone number as default password during user provisioning.
+     * Sets the password as non-temporary, allowing users to login with this password.
+     *
+     * @param realmName the realm/tenant identifier
+     * @param userId the user identifier
+     * @param password the password to set
+     * @throws IllegalArgumentException if password is blank
+     * @throws IllegalStateException if UserSecrets not found or password setting fails
+     */
+    void setPassword(String realmName, String userId, String password);
 
 }

@@ -117,10 +117,15 @@ public class QueryBuilderUtil {
         if (searchParams.containsKey(DATE_FILTER))
             addDateRangeCriteria(searchParams, allCriteria);
 
-        Criteria finalCriteria = allCriteria.isEmpty()
-                ? new Criteria()
-                : new Criteria().andOperator(allCriteria.toArray(new Criteria[0]));
-
+        Criteria finalCriteria;
+        if (allCriteria.isEmpty()) {
+            finalCriteria = new Criteria();
+        } else if (allCriteria.size() == 1) {
+            // avoid wrapping a single criteria in a redundant $and
+            finalCriteria = allCriteria.get(0);
+        } else {
+            finalCriteria = new Criteria().andOperator(allCriteria.toArray(new Criteria[0]));
+        }
 
         Query query = Query.query(finalCriteria);
         if (searchParams.containsKey(SORT))
@@ -197,17 +202,31 @@ public class QueryBuilderUtil {
             andMap.forEach((key, value) -> andCriteria.add(buildFieldCriteria(key, value)));
         }
 
-        // Combine
-        if (!orCriteria.isEmpty() && !andCriteria.isEmpty()) {
-            return new Criteria().andOperator(
-                    new Criteria().orOperator(orCriteria.toArray(new Criteria[0])),
-                    new Criteria().andOperator(andCriteria.toArray(new Criteria[0]))
-            );
-        } else if (!orCriteria.isEmpty()) {
-            return new Criteria().orOperator(orCriteria.toArray(new Criteria[0]));
-        } else if (!andCriteria.isEmpty()) {
-            return new Criteria().andOperator(andCriteria.toArray(new Criteria[0]));
+        // Build OR part — only wrap in orOperator when there are multiple conditions
+        Criteria orPart = null;
+        if (orCriteria.size() == 1) {
+            orPart = orCriteria.get(0);
+        } else if (orCriteria.size() > 1) {
+            orPart = new Criteria().orOperator(orCriteria.toArray(new Criteria[0]));
         }
+
+        // Build AND part — only wrap in andOperator when there are multiple conditions
+        Criteria andPart = null;
+        if (andCriteria.size() == 1) {
+            andPart = andCriteria.get(0);
+        } else if (andCriteria.size() > 1) {
+            andPart = new Criteria().andOperator(andCriteria.toArray(new Criteria[0]));
+        }
+
+        // Combine OR and AND parts
+        if (orPart != null && andPart != null) {
+            return new Criteria().andOperator(orPart, andPart);
+        } else if (orPart != null) {
+            return orPart;
+        } else if (andPart != null) {
+            return andPart;
+        }
+
         return null;
     }
 

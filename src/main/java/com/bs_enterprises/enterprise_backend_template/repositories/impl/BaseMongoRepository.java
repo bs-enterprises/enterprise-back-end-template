@@ -3,8 +3,8 @@ package com.bs_enterprises.enterprise_backend_template.repositories.impl;
 import com.bs_enterprises.enterprise_backend_template.constants.MongoDBConstants;
 import com.bs_enterprises.enterprise_backend_template.keys.DatabaseKeys;
 import com.bs_enterprises.enterprise_backend_template.repositories.BaseMongoRepositoryContract;
-import com.bs_enterprises.enterprise_backend_template.services.DatabaseService;
-import com.bs_enterprises.enterprise_backend_template.services.IndexingService;
+import com.bs_enterprises.enterprise_backend_template.services.base.DatabaseService;
+import com.bs_enterprises.enterprise_backend_template.services.base.IndexingService;
 import com.bs_enterprises.enterprise_backend_template.utils.QueryBuilderUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +19,6 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.util.CollectionUtils;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -54,15 +53,31 @@ public abstract class BaseMongoRepository<T> implements BaseMongoRepositoryContr
         }
     }
 
+    @Override
+    public T create(T entity, String tenant, String collectionName) {
+        log.info("create called — tenant='{}', entity='{}', collection='{}'", tenant, getEntityClass().getSimpleName(), collectionName);
+        MongoTemplate mongoTemplate = databaseService.changeDatabaseAndGetNewMongoTemplate(tenant);
+
+        try {
+            @SuppressWarnings("unchecked")
+            T saved = mongoTemplate.insert(entity, collectionName);
+            log.info("create completed — tenant='{}', entity='{}', collection='{}'", tenant, getEntityClass().getSimpleName(), collectionName);
+            return saved;
+        } catch (Exception ex) {
+            log.error("create failed — tenant='{}', entity='{}', collection='{}', error={}",
+                    tenant, getEntityClass().getSimpleName(), collectionName, ex.getMessage(), ex);
+            throw new IllegalStateException(DatabaseKeys.CREATION_FAILED);
+        }
+    }
+
     /**
-     * Update by id using Map of updates (validations are expected before calling).
+     * Update by id using Map of updates (pre-cleaned and filtered by AbstractMongoCrudService).
      * Returns the updated document using findAndModify in one round-trip.
      */
     @Override
     public T update(
             String id,
             Map<String, Object> updates,
-            List<String> allowedKeysForUpdate,
             String tenant
     ) {
         log.info(
@@ -80,35 +95,7 @@ public abstract class BaseMongoRepository<T> implements BaseMongoRepositoryContr
             throw new IllegalStateException(DatabaseKeys.INVALID_UPDATE_PAYLOAD);
         }
 
-    /* ============================================================
-       1️⃣ Filter allowed keys
-       ============================================================ */
-
-        Map<String, Object> safeUpdates = new HashMap<>();
-
-        if (allowedKeysForUpdate != null && !allowedKeysForUpdate.isEmpty()) {
-            for (Map.Entry<String, Object> entry : updates.entrySet()) {
-                if (allowedKeysForUpdate.contains(entry.getKey())) {
-                    safeUpdates.put(entry.getKey(), entry.getValue());
-                }
-            }
-        } else {
-            // fallback: allow all (backward compatibility / special cases)
-            safeUpdates.putAll(updates);
-        }
-
-        if (safeUpdates.isEmpty()) {
-            log.warn(
-                    "update — tenant='{}', id='{}': no valid fields after filtering",
-                    tenant, id
-            );
-            return null;
-//            throw new IllegalStateException(DatabaseKeys.INVALID_UPDATE_PAYLOAD);
-        }
-
-    /* ============================================================
-       2️⃣ Existence check
-       ============================================================ */
+        // ...existing code...
 
         if (!indexingService.existsDocumentById(
                 tenant,
@@ -123,15 +110,9 @@ public abstract class BaseMongoRepository<T> implements BaseMongoRepositoryContr
             throw new IllegalStateException(DatabaseKeys.RECORD_NOT_FOUND);
         }
 
-    /* ============================================================
-       3️⃣ Mongo update
-       ============================================================ */
-
-        Query query =
-                new Query(Criteria.where(MongoDBConstants.FIELD_ID).is(id));
-
+        Query query = new Query(Criteria.where(MongoDBConstants.FIELD_ID).is(id));
         Update update = new Update();
-        safeUpdates.forEach((key, value) -> {
+        updates.forEach((key, value) -> {
             if (value == null) {
                 update.unset(key);
             } else {
@@ -184,7 +165,6 @@ public abstract class BaseMongoRepository<T> implements BaseMongoRepositoryContr
     public long bulkUpdateByFilters(
             Map<String, Object> filters,
             Map<String, Object> updates,
-            List<String> allowedKeysForUpdate,
             String tenant
     ) {
         log.info(
@@ -206,39 +186,9 @@ public abstract class BaseMongoRepository<T> implements BaseMongoRepositoryContr
         MongoTemplate mongoTemplate =
                 databaseService.changeDatabaseAndGetNewMongoTemplate(tenant);
 
-    /* ============================================================
-       1️⃣ Filter allowed update keys
-       ============================================================ */
-
-        Map<String, Object> safeUpdates = new HashMap<>();
-
-        if (allowedKeysForUpdate != null && !allowedKeysForUpdate.isEmpty()) {
-            for (Map.Entry<String, Object> entry : updates.entrySet()) {
-                if (allowedKeysForUpdate.contains(entry.getKey())) {
-                    safeUpdates.put(entry.getKey(), entry.getValue());
-                }
-            }
-        } else {
-            // fallback — allow all updates (special/internal usage)
-            safeUpdates.putAll(updates);
-        }
-
-        if (safeUpdates.isEmpty()) {
-            log.warn(
-                    "bulkUpdateByFilters — tenant='{}': no valid update fields after filtering",
-                    tenant
-            );
-            throw new IllegalStateException(DatabaseKeys.INVALID_UPDATE_PAYLOAD);
-        }
-
-    /* ============================================================
-       2️⃣ Build query & update
-       ============================================================ */
-
         Query query = QueryBuilderUtil.buildQuery(filters);
-
         Update update = new Update();
-        safeUpdates.forEach(update::set);
+        updates.forEach(update::set);
 
         try {
             var result =
@@ -413,6 +363,44 @@ public abstract class BaseMongoRepository<T> implements BaseMongoRepositoryContr
             log.error("bulkDeleteByFilters failed — tenant='{}', collection='{}', error={}",
                     tenant, getCollectionName(), ex.getMessage(), ex);
             throw new IllegalStateException(DatabaseKeys.DELETE_FAILED);
+        }
+    }
+
+    @Override
+    public long countByFilters(Map<String, Object> filters, String tenant) {
+        log.info(
+                "countByFilters called — tenant='{}', collection='{}', filters={}",
+                tenant,
+                getCollectionName(),
+                CollectionUtils.isEmpty(filters) ? "{}" : filters.keySet()
+        );
+
+        if (CollectionUtils.isEmpty(filters)) {
+            log.warn("countByFilters — tenant='{}': empty filters provided for collection='{}'", tenant, getCollectionName());
+        }
+
+        MongoTemplate mongoTemplate = databaseService.changeDatabaseAndGetNewMongoTemplate(tenant);
+
+        try {
+            Query query = QueryBuilderUtil.buildQuery(filters);
+            long count = mongoTemplate.count(query, getEntityClass(), getCollectionName());
+
+            log.info(
+                    "countByFilters completed — tenant='{}', collection='{}', count={}",
+                    tenant,
+                    getCollectionName(),
+                    count
+            );
+            return count;
+        } catch (Exception ex) {
+            log.error(
+                    "countByFilters failed — tenant='{}', collection='{}', error={}",
+                    tenant,
+                    getCollectionName(),
+                    ex.getMessage(),
+                    ex
+            );
+            throw new IllegalStateException(DatabaseKeys.COUNT_FAILED);
         }
     }
 

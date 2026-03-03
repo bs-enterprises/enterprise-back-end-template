@@ -11,8 +11,8 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Minimal DTO required to create a Keycloak user.
@@ -28,7 +28,7 @@ public class KeycloakUserModel {
 
     @Id
     @Field(MongoDBConstants.FIELD_ID)
-    private String id;  // Keycloak ID or UUID
+    private String id; // employee Id
 
     @NotBlank(message = ValidationKeys.USERNAME_REQUIRED)
     @Size(min = 3, max = 100, message = ValidationKeys.USERNAME_SIZE)
@@ -66,8 +66,16 @@ public class KeycloakUserModel {
      */
     private boolean emailVerified = false;
 
+    /**
+     * Custom Keycloak attributes
+     * Key → attribute name
+     * Value → single value (will be converted to List internally)
+     */
+    private Map<String, String> attributes;
+
+
     public static List<String> allowedKeysForUpdate = List.of(
-            "username",
+//            "username",
             "firstName",
             "lastName",
             "email",

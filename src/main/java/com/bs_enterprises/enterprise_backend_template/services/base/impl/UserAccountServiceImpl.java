@@ -1,4 +1,4 @@
-package com.bs_enterprises.enterprise_backend_template.services.impl;
+package com.bs_enterprises.enterprise_backend_template.services.base.impl;
 
 import com.bs_enterprises.enterprise_backend_template.constants.MongoDBConstants;
 import com.bs_enterprises.enterprise_backend_template.keys.DatabaseKeys;
@@ -7,16 +7,17 @@ import com.bs_enterprises.enterprise_backend_template.models.users.KeycloakUserM
 import com.bs_enterprises.enterprise_backend_template.models.users.LoadedArtifacts;
 import com.bs_enterprises.enterprise_backend_template.models.users.UserSecrets;
 import com.bs_enterprises.enterprise_backend_template.repositories.GenericMongoRepository;
-import com.bs_enterprises.enterprise_backend_template.services.IndexingService;
-import com.bs_enterprises.enterprise_backend_template.services.KeycloakUserService;
-import com.bs_enterprises.enterprise_backend_template.services.UserAccountService;
-import com.bs_enterprises.enterprise_backend_template.services.UserSecretService;
+import com.bs_enterprises.enterprise_backend_template.services.base.IndexingService;
+import com.bs_enterprises.enterprise_backend_template.services.base.KeycloakUserService;
+import com.bs_enterprises.enterprise_backend_template.services.base.UserAccountService;
+import com.bs_enterprises.enterprise_backend_template.services.base.UserSecretService;
 import com.bs_enterprises.enterprise_backend_template.utils.SnowflakeIdGeneratorUtil;
 import io.micrometer.common.util.StringUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.security.SecureRandom;
 import java.util.*;
 
 @Component
@@ -34,8 +35,8 @@ public class UserAccountServiceImpl implements UserAccountService {
                                                 String userId,
                                                 String email,
                                                 String phone,
-                                                List<String> studioIds,
-                                                boolean studioRequired) {
+                                                List<String> companyIds,
+                                                boolean companyRequired) {
         if (realmName == null || realmName.isBlank()) throw new IllegalArgumentException(ExecutionKeys.REALM_REQUIRED);
 
         String id = userId;
@@ -67,10 +68,10 @@ public class UserAccountServiceImpl implements UserAccountService {
         }
 
         // validate studios if required or if provided
-        if ((studioRequired || (studioIds != null && !studioIds.isEmpty()))
-                && !indexingService.existsAllDocumentsByIds(realmName, null, studioIds, MongoDBConstants.COLLECTION_STUDIOS)) {
-            log.warn("{} — realm='{}', studioIds='{}'", ExecutionKeys.STUDIO_NOT_FOUND, realmName, studioIds);
-            throw new IllegalArgumentException(ExecutionKeys.STUDIO_NOT_FOUND);
+        if ((companyRequired || (companyIds != null && !companyIds.isEmpty()))
+                && !indexingService.existsAllDocumentsByIds(realmName, null, companyIds, MongoDBConstants.COLLECTION_COMPANIES)) {
+            log.warn("{} — realm='{}', companyIds='{}'", ExecutionKeys.COMPANY_NOT_FOUND, realmName, companyIds);
+            throw new IllegalArgumentException(ExecutionKeys.COMPANY_NOT_FOUND);
         }
 
         return id;
@@ -90,7 +91,16 @@ public class UserAccountServiceImpl implements UserAccountService {
 
         // persist secrets
         UserSecrets secrets = new UserSecrets(kcUser.getId(), keycloakUserId);
-        userSecretService.save(secrets, realmName, null);
+        userSecretService.create(secrets, realmName);
+
+        // Set a random temporary password — user will be forced to change it on first login
+        try {
+            String randomPassword = generateRandomPassword();
+            setPassword(realmName, keycloakUserId, randomPassword);
+            log.info("Random password set for user id='{}' — UPDATE_PASSWORD action will be enforced on login", kcUser.getId());
+        } catch (Exception e) {
+            log.warn("Failed to set random password for user id='{}': {}", kcUser.getId(), e.getMessage());
+        }
 
         // create indices: uid, email, phone
         indexingService.createIndexEntry(realmName, null, kcUser.getId(), MongoDBConstants.INDEX_UIDS);
@@ -105,7 +115,7 @@ public class UserAccountServiceImpl implements UserAccountService {
         Objects.requireNonNull(realmName);
         Objects.requireNonNull(userId);
 
-        UserSecrets secrets = userSecretService.findById(userId, realmName, null);
+        UserSecrets secrets = userSecretService.getById(userId, realmName);
         if (secrets == null)
             throw new IllegalStateException(DatabaseKeys.RECORD_NOT_FOUND + ": UserSecrets not found for id: " + userId);
 
@@ -127,7 +137,7 @@ public class UserAccountServiceImpl implements UserAccountService {
         // allowedKeys parameter is ignored on purpose — we only accept fields defined on KeycloakUserModel
 
         // load artifacts
-        UserSecrets secrets = userSecretService.findById(userId, realmName, null);
+        UserSecrets secrets = userSecretService.getById(userId, realmName);
         if (secrets == null) {
             log.info("UserSecrets not found for id='{}' in realm='{}'", userId, realmName);
             throw new IllegalStateException(DatabaseKeys.RECORD_NOT_FOUND);
@@ -152,13 +162,13 @@ public class UserAccountServiceImpl implements UserAccountService {
 
             // Only accept fields that exist on KeycloakUserModel
             switch (k) {
-                case "username" -> {
-                    String newUsername = v == null ? null : String.valueOf(v).trim();
-                    if (!Objects.equals(newUsername, kcUser.getUsername())) {
-                        kcUser.setUsername(newUsername);
-                        kcUpdates.put("username", newUsername);
-                    }
-                }
+//                case "username" -> {
+//                    String newUsername = v == null ? null : String.valueOf(v).trim();
+//                    if (!Objects.equals(newUsername, kcUser.getUsername())) {
+//                        kcUser.setUsername(newUsername);
+//                        kcUpdates.put("username", newUsername);
+//                    }
+//                }
 
                 case "firstName" -> {
                     String newFirst = v == null ? null : String.valueOf(v);
@@ -212,18 +222,18 @@ public class UserAccountServiceImpl implements UserAccountService {
                     }
                 }
 
-                case "studioIds" -> {
+                case "companyIds" -> {
                     if (v instanceof Collection<?> collection) {
                         // validate that all studio ids exist
                         @SuppressWarnings("unchecked")
                         Collection<String> ids = (Collection<String>) collection;
-                        if (!ids.isEmpty() && !indexingService.existsAllDocumentsByIds(realmName, null, List.copyOf(ids), MongoDBConstants.COLLECTION_STUDIOS)) {
-                            log.warn("updateUser — tenant='{}', id='{}': some studioIds not found {}", realmName, userId, ids);
-                            throw new IllegalArgumentException(ExecutionKeys.STUDIO_NOT_FOUND);
+                        if (!ids.isEmpty() && !indexingService.existsAllDocumentsByIds(realmName, null, List.copyOf(ids), MongoDBConstants.COLLECTION_COMPANIES)) {
+                            log.warn("updateUser — tenant='{}', id='{}': some companyIds not found {}", realmName, userId, ids);
+                            throw new IllegalArgumentException(ExecutionKeys.COMPANY_NOT_FOUND);
                         }
-                        kcUpdates.put("studioIds", List.copyOf(ids));
+                        kcUpdates.put("companyIds", List.copyOf(ids));
                     } else {
-                        log.warn("updateUser — tenant='{}', id='{}': studioIds must be a collection, got={}", realmName, userId,
+                        log.warn("updateUser — tenant='{}', id='{}': companyIds must be a collection, got={}", realmName, userId,
                                 v == null ? "null" : v.getClass().getName());
                         throw new IllegalStateException(DatabaseKeys.INVALID_UPDATE_PAYLOAD);
                     }
@@ -238,12 +248,7 @@ public class UserAccountServiceImpl implements UserAccountService {
 
         // update Keycloak (use stored keycloak id)
         String keycloakUserId = secrets.getKeycloakUserId();
-        try {
-            keycloakUserService.updateUser(realmName, keycloakUserId, kcUser);
-        } catch (Exception ex) {
-            log.error("Failed to update Keycloak user for id={}: {}", userId, ex.getMessage(), ex);
-            throw new IllegalStateException(DatabaseKeys.UPDATE_FAILED);
-        }
+        keycloakUserService.updateUser(realmName, keycloakUserId, kcUser);
 
         // update indices for email/phone
         String newEmail = kcUser.getEmail();
@@ -265,7 +270,7 @@ public class UserAccountServiceImpl implements UserAccountService {
 
         // persist changes to KeycloakUserModel via repository update if kcUpdates present
         if (!kcUpdates.isEmpty()) {
-            keycloakUserRepository.update(userId, kcUpdates,KeycloakUserModel.allowedKeysForUpdate , realmName);
+            keycloakUserRepository.update(userId, kcUpdates, realmName);
         }
 
         // return fresh model
@@ -275,7 +280,7 @@ public class UserAccountServiceImpl implements UserAccountService {
     @Override
     public void deleteUser(String realmName, String userId) {
         Objects.requireNonNull(userId);
-        UserSecrets secrets = userSecretService.findById(userId, realmName, null);
+        UserSecrets secrets = userSecretService.getById(userId, realmName);
         if (secrets == null) {
             log.warn("UserSecrets not found for id='{}' in realm='{}'", userId, realmName);
             throw new IllegalStateException(ExecutionKeys.USER_NOT_FOUND);
@@ -312,7 +317,58 @@ public class UserAccountServiceImpl implements UserAccountService {
             keycloakUserRepository.delete(userId, realmName);
         } catch (Exception ignored) { /* ignore */ }
 
-        boolean secretDeleted = userSecretService.deleteById(userId, realmName, null);
-        if (!secretDeleted) log.warn("UserSecrets deletion returned false for id='{}' realm='{}'", userId, realmName);
+        userSecretService.delete(userId, realmName);
+    }
+
+    @Override
+    public void setPassword(String realmName, String keycloakUserId, String password) {
+        Objects.requireNonNull(realmName, "realmName is required");
+        Objects.requireNonNull(keycloakUserId, "userId is required");
+        Objects.requireNonNull(password, "password is required");
+
+        if (password.isBlank()) {
+            throw new IllegalArgumentException("Password cannot be blank");
+        }
+
+        log.info("Setting password for user id='{}' in realm='{}'", keycloakUserId, realmName);
+
+        try {
+            // Set password as non-temporary — UPDATE_PASSWORD required action is added inside KeycloakUserService
+            keycloakUserService.setPassword(realmName, null, keycloakUserId, password, true);
+            log.info("Password set successfully for user id='{}' in realm='{}'", keycloakUserId, realmName);
+        } catch (Exception e) {
+            log.error("Failed to set password for user id='{}' in realm='{}': {}", keycloakUserId, realmName, e.getMessage(), e);
+            throw new IllegalStateException("Failed to set password: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Generates a cryptographically random password.
+     * Format: 4 uppercase + 4 lowercase + 3 digits + 2 special chars = 13 chars, then shuffled.
+     */
+    private String generateRandomPassword() {
+        final String UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        final String LOWER = "abcdefghijklmnopqrstuvwxyz";
+        final String DIGITS = "0123456789";
+        final String SPECIAL = "!@#$%^&*";
+        final String ALL = UPPER + LOWER + DIGITS + SPECIAL;
+
+        SecureRandom random = new SecureRandom();
+        List<Character> chars = new ArrayList<>();
+
+        // Guarantee at least one char from each category
+        for (int i = 0; i < 4; i++) chars.add(UPPER.charAt(random.nextInt(UPPER.length())));
+        for (int i = 0; i < 4; i++) chars.add(LOWER.charAt(random.nextInt(LOWER.length())));
+        for (int i = 0; i < 3; i++) chars.add(DIGITS.charAt(random.nextInt(DIGITS.length())));
+        for (int i = 0; i < 2; i++) chars.add(SPECIAL.charAt(random.nextInt(SPECIAL.length())));
+
+        // Shuffle to avoid predictable category order
+        Collections.shuffle(chars, random);
+
+        StringBuilder password = new StringBuilder(chars.size());
+        for (char c : chars) password.append(c);
+
+        log.debug("Random password generated (length={})", password.length());
+        return password.toString();
     }
 }

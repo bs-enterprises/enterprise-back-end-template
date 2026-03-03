@@ -1,4 +1,4 @@
-package com.bs_enterprises.enterprise_backend_template.services;
+package com.bs_enterprises.enterprise_backend_template.services.base;
 
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Service;

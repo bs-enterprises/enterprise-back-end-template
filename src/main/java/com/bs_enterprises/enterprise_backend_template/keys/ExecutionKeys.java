@@ -14,8 +14,9 @@ public final class ExecutionKeys {
     public static final String USER_ID_ALREADY_EXISTS = "execution.user-id.already-exists";
     public static final String EMAIL_ALREADY_EXISTS = "execution.email.already-exists";
     public static final String PHONE_ALREADY_EXISTS = "execution.phone.already-exists";
-    public static final String STUDIO_NOT_FOUND = "execution.studios.studio.not-found";
-    public static final String USER_NOT_FOUND = "execution.users.user-not-found";
+    public static final String COMPANY_NOT_FOUND = "execution.company.not-found";
+    public static final String USER_NOT_FOUND = "execution.user-management.user-not-found";
 
-    // add more execution keys as you add more runtime checks
+    public static final String FAILED_TO_UPDATE_USER = "execution.user-management.failed-to-update-user";
+    public static final String FAILED_TO_DELETE_USER = "execution.user-management.failed-to-delete-user";
 }

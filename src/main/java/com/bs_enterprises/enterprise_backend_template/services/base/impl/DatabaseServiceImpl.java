@@ -1,8 +1,8 @@
-package com.bs_enterprises.enterprise_backend_template.services.impl;
+package com.bs_enterprises.enterprise_backend_template.services.base.impl;
 
-import com.bs_enterprises.enterprise_backend_template.services.DatabaseService;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoDatabase;
+import com.bs_enterprises.enterprise_backend_template.services.base.DatabaseService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.MongoTemplate;

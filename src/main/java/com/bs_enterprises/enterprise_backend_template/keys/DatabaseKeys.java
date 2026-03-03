@@ -14,6 +14,7 @@ public final class DatabaseKeys {
     public static final String CREATION_FAILED = "database.creation.failed";
     public static final String UPDATE_FAILED = "database.update.failed";
     public static final String DELETE_FAILED = "database.delete.failed";
+    public static final String COUNT_FAILED = "database.count.failed";
 
     public static final String RECORD_NOT_FOUND = "database.record.not-found";
     public static final String RECORD_ALREADY_EXISTS = "database.record.already-exists";

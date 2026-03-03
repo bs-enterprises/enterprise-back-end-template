@@ -1,8 +1,8 @@
 package com.bs_enterprises.enterprise_backend_template.repositories;
 
 import com.bs_enterprises.enterprise_backend_template.repositories.impl.BaseMongoRepository;
-import com.bs_enterprises.enterprise_backend_template.services.DatabaseService;
-import com.bs_enterprises.enterprise_backend_template.services.IndexingService;
+import com.bs_enterprises.enterprise_backend_template.services.base.DatabaseService;
+import com.bs_enterprises.enterprise_backend_template.services.base.IndexingService;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -27,6 +27,7 @@ public class GenericMongoRepository<T> extends BaseMongoRepository<T> {
 
     @Override
     protected Class<T> getEntityClass() {
+        log.debug("getEntityClass called — returning {}, for collection: {}", entityClass, collectionName);
         return entityClass;
     }
 

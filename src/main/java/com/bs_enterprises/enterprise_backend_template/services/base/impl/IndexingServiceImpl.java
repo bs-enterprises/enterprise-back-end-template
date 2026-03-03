@@ -1,9 +1,9 @@
-package com.bs_enterprises.enterprise_backend_template.services.impl;
+package com.bs_enterprises.enterprise_backend_template.services.base.impl;
 
 import com.bs_enterprises.enterprise_backend_template.constants.MongoDBConstants;
 import com.bs_enterprises.enterprise_backend_template.models.users.IndexEntry;
-import com.bs_enterprises.enterprise_backend_template.services.DatabaseService;
-import com.bs_enterprises.enterprise_backend_template.services.IndexingService;
+import com.bs_enterprises.enterprise_backend_template.services.base.DatabaseService;
+import com.bs_enterprises.enterprise_backend_template.services.base.IndexingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
